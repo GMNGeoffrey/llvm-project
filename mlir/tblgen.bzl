@@ -20,7 +20,7 @@ def gentbl(name, tblgen, td_file, tbl_outs, td_srcs = [], td_includes = [], stri
     if td_file not in td_srcs:
         srcs += [td_file]
 
-    td_includes_cmd = ["-I mlir/include" ]
+    td_includes_cmd = ["-I mlir/include -I external/llvm_project/mlir/include" ]
     td_includes_cmd += ["-I $(GENDIR)/mlir/include"]
     for td_include in td_includes:
         td_includes_cmd += ["-I%s" % td_include]

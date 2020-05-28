@@ -59,8 +59,8 @@ def gentbl(name, tblgen, td_file, td_srcs, tbl_outs, library = True, **kwargs):
             outs = [out],
             tools = [tblgen],
             message = "Generating code from table: %s" % td_file,
-            cmd = (("$(location %s) " + "-I llvm/include " +
-                    "-I clang/include " +
+            cmd = (("$(location %s) " + "-I llvm/include " + "-I external/llvm_project/llvm/include " +
+                    "-I clang/include " + "-I external/llvm_project/clang/include " +
                     "-I $$(dirname $(location %s)) " + ("%s $(location %s) --long-string-literals=0 " +
                                                         "-o $@")) % (
                 tblgen,
