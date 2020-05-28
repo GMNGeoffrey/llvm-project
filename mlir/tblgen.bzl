@@ -20,8 +20,19 @@ def gentbl(name, tblgen, td_file, tbl_outs, td_srcs = [], td_includes = [], stri
     if td_file not in td_srcs:
         srcs += [td_file]
 
-    td_includes_cmd = ["-I mlir/include -I external/llvm_project/mlir/include" ]
-    td_includes_cmd += ["-I $(GENDIR)/mlir/include"]
+    td_includes_cmd = [
+        "-I mlir",
+        "-I mlir/include",
+        "-I external/llvm_project",
+        "-I external/llvm_project/mlir",
+        "-I external/llvm_project/mlir/include",
+        "-I $(GENDIR)",
+        "-I $(GENDIR)/mlir",
+        "-I $(GENDIR)/mlir/include",
+        "-I $(GENDIR)/external/llvm_project",
+        "-I $(GENDIR)/external/llvm_project/mlir",
+        "-I $(GENDIR)/external/llvm_project/mlir/include",
+    ]
     for td_include in td_includes:
         td_includes_cmd += ["-I%s" % td_include]
     local_inc = "-I $$(dirname $(location %s))" % td_file
@@ -43,7 +54,6 @@ def gentbl(name, tblgen, td_file, tbl_outs, td_srcs = [], td_includes = [], stri
             "$(location %s)" % tblgen,
             "%s" % opts,
             "$(location %s)" % td_file,
-            "-I$(GENDIR)",
         ] + td_includes_cmd
         rule_suffix = "_".join(opts.replace("-", "_").replace("=", "_").split(" "))
 
