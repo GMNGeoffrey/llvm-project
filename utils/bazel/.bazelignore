@@ -1,0 +1,2 @@
+# We don't want Bazel building these directly, only through our symlink trickery
+llvm-project-overlay
