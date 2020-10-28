@@ -1,0 +1,3 @@
+# When this is symlinked in, don't treat the Bazel configuration as normal BUILD
+# files and BUILD them. Everything will get very confused.
+utils/bazel
