@@ -16,6 +16,7 @@ cc_test(
         "ADT/*.cpp",
         "ADT/*.h",
     ]),
+    shard_count = 20,
     deps = [
         "//llvm:Core",
         "//llvm:Support",
@@ -254,6 +255,7 @@ cc_test(
         "IR/*.h",
         "Support/KnownBitsTest.h",
     ]),
+    shard_count = 20,
     deps = [
         "//llvm:Analysis",
         "//llvm:AsmParser",
@@ -346,6 +348,7 @@ cc_test(
     srcs = glob(["Object/*.cpp"]),
     deps = [
         "//llvm:Object",
+        "//llvm:ObjectYAML",
         "//llvm:TestingSupport",
         "//llvm:gtest",
         "//llvm:gtest_main",
@@ -369,6 +372,7 @@ cc_test(
 
 gentbl(
     name = "option_tests_gen",
+    strip_include_prefix = "Option",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "Option/Opts.inc",
@@ -382,6 +386,7 @@ gentbl(
 
 gentbl(
     name = "automata_automata_gen",
+    strip_include_prefix = "TableGen",
     tbl_outs = [(
         "-gen-automata",
         "TableGen/AutomataAutomata.inc",
@@ -395,6 +400,7 @@ gentbl(
 
 gentbl(
     name = "automata_tables_gen",
+    strip_include_prefix = "TableGen",
     tbl_outs = [(
         "-gen-searchable-tables",
         "TableGen/AutomataTables.inc",
@@ -466,7 +472,7 @@ cc_test(
     ],
     linkstatic = 1,
     tags = [
-        "local", # Not compatible with the sandbox on MacOS
+        "local",  # Not compatible with the sandbox on MacOS
     ],
     visibility = ["//visibility:private"],
     deps = [
@@ -504,9 +510,6 @@ cc_test(
     srcs = glob([
         "TableGen/*.cpp",
     ]),
-    copts = [
-        "-Iexternal/llvm-project/llvm/utils/TableGen/",
-    ],
     deps = [
         ":automata_automata_gen",
         ":automata_tables_gen",
@@ -564,10 +567,8 @@ cc_test(
     ]) + [
         "tools/llvm-exegesis/Common/AssemblerUtils.h",
     ],
-    copts = [
-        "-Iexternal/llvm-project/llvm/tools/llvm-exegesis/lib/",
-        "-DHAVE_LIBPFM=1",
-    ],
+    copts = ["-DHAVE_LIBPFM=1"],
+    linkopts = ["-lpfm"],
     tags = [
         "manual",  # External dependency (libpfm4)
         "nobuildkite",  # TODO(chandlerc): Add support for fetching and building libpfm4 and enable this.

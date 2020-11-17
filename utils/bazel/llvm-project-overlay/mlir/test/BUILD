@@ -31,6 +31,7 @@ filegroup(
         "//mlir:include/mlir/IR/SymbolInterfaces.td",
         "//mlir:include/mlir/Interfaces/CallInterfaces.td",
         "//mlir:include/mlir/Interfaces/ControlFlowInterfaces.td",
+        "//mlir:include/mlir/Interfaces/CopyOpInterface.td",
         "//mlir:include/mlir/Interfaces/InferTypeOpInterface.td",
         "//mlir:include/mlir/Interfaces/SideEffectInterfaces.td",
     ],
@@ -144,6 +145,7 @@ cc_library(
         ":TestTypeDefsIncGen",
         "//llvm:Support",
         "//mlir:ControlFlowInterfaces",
+        "//mlir:CopyOpInterface",
         "//mlir:DerivedAttributeOpInterface",
         "//mlir:Dialect",
         "//mlir:IR",
@@ -272,6 +274,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:Pass",
         "//mlir:SPIRVDialect",
+        "//mlir:SPIRVLinking",
         "//mlir:SPIRVLowering",
     ],
 )
@@ -285,5 +288,19 @@ cc_library(
         ":TestDialect",
         "//mlir:IR",
         "//mlir:LLVMDialect",
+    ],
+)
+
+cc_library(
+    name = "TestTosaDialect",
+    srcs = glob([
+        "lib/Dialect/Tosa/*.cpp",
+    ]),
+    deps = [
+        "//mlir:IR",
+        "//mlir:Pass",
+        "//mlir:StandardOps",
+        "//mlir:TosaDialect",
+        "//mlir:Transforms",
     ],
 )

@@ -9,7 +9,7 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 llvm_configure(
     name = "llvm-project",
     overlay_path = "llvm-project-overlay",
-    src_path = "../..",
+    src_path = "../third_party/llvm-project",
 )
 
 load(":terminfo.bzl", "llvm_terminfo_from_env")
@@ -81,5 +81,4 @@ http_archive(
 )
 
 load("@bazel_toolchains//rules:rbe_repo.bzl", "rbe_autoconfig")
-
 rbe_autoconfig(name = "rbe_default")

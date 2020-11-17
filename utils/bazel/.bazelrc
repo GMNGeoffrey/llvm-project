@@ -92,8 +92,8 @@ build:msvc --copt=/D_CRT_SECURE_NO_WARNINGS --host_copt=/D_CRT_SECURE_NO_WARNING
 
 ###############################################################################
 # Configuration for building remotely using Remote Build Execution (RBE)
-# https://cloud.google.com/remote-build-execution/
-# Based on https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/bazel-1.0.0.bazelrc
+# Based on
+# https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/bazel-1.0.0.bazelrc
 ###############################################################################
 
 build:rbe --remote_instance_name=projects/llvm-bazel/instances/default_instance
@@ -102,7 +102,7 @@ build:rbe --remote_instance_name=projects/llvm-bazel/instances/default_instance
 # this higher can make builds faster by allowing more jobs to run in parallel.
 # Setting it too high can result in jobs that timeout, however, while waiting
 # for a remote machine to execute them.
-build:rbe --jobs=50
+build:rbe --jobs=150
 
 # Set several flags related to specifying the platform, toolchain and java
 # properties.
@@ -136,7 +136,7 @@ build:rbe --incompatible_strict_action_env=true
 # Set a higher timeout value, just in case.
 build:rbe --remote_timeout=3600
 
-# Local disk cache is incompatible with remote execution (for obvious reasons).
+# Local disk cache is incompatible with remote execution.
 build:rbe --disk_cache=""
 
 # Enable authentication. This will pick up application default credentials by

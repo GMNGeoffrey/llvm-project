@@ -14,6 +14,7 @@
    into Bazel defines, but it is by no means complete, so if you see something
    that looks wrong, it probably is. */
 
+
 /* This file enumerates variables from the LLVM configuration so that they
    can be in exported headers and won't override package specific directives.
    This is a C header that can be included in the llvm-c headers. */
@@ -89,8 +90,7 @@
 /* Define if we have z3 and want to build it */
 /* #undef LLVM_WITH_Z3 */
 
-/* Define if LLVM was built with a dependency to the libtensorflow dynamic
- * library */
+/* Define if LLVM was built with a dependency to the libtensorflow dynamic library */
 /* #undef LLVM_HAVE_TF_API */
 
 /* Define if LLVM was built with a dependency to the tensorflow compiler */

@@ -453,13 +453,23 @@ cc_library(
     name = "tblgen",
     srcs = glob([
         "utils/TableGen/*.cpp",
-        "utils/TableGen/*.h",
         "utils/TableGen/GlobalISel/*.cpp",
+
+        # We have to include these headers here as well as in the `hdrs` below
+        # to allow the `.cpp` files to use file-relative-inclusion to find
+        # them, even though consumers of this library use inclusion relative to
+        # `utils/TableGen` with the `strip_includes_prefix` of this library.
+        # This mixture appears to be incompatible with header modules.
+        "utils/TableGen/*.h",
+        "utils/TableGen/GlobalISel/*.h",
     ]),
     hdrs = glob([
+        "utils/TableGen/*.h",
         "utils/TableGen/GlobalISel/*.h",
     ]),
     copts = llvm_copts,
+    features = ["-header_modules"],
+    strip_include_prefix = "utils/TableGen",
     deps = [
         ":MC",
         ":Support",
@@ -535,6 +545,10 @@ llvm_target_intrinsics_list = [
     {
         "name": "R600",
         "intrinsic_prefix": "r600",
+    },
+    {
+        "name": "VE",
+        "intrinsic_prefix": "ve",
     },
     {
         "name": "RISCV",
@@ -931,6 +945,7 @@ cc_library(
 
 gentbl(
     name = "InstCombineTableGen",
+    strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = [(
         "-gen-searchable-tables",
         "lib/Target/AMDGPU/InstCombineTables.inc",
@@ -1599,6 +1614,7 @@ filegroup(
 
 gentbl(
     name = "amdgpu_isel_target_gen",
+    strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = [
         ("-gen-global-isel", "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc"),
         ("-gen-global-isel-combiner -combiners=AMDGPUPreLegalizerCombinerHelper", "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc"),
@@ -1616,6 +1632,7 @@ gentbl(
 
 gentbl(
     name = "r600_target_gen",
+    strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = [
         ("-gen-asm-writer", "lib/Target/AMDGPU/R600GenAsmWriter.inc"),
         ("-gen-callingconv", "lib/Target/AMDGPU/R600GenCallingConv.inc"),
@@ -1638,8 +1655,16 @@ gentbl(
 [[
     [gentbl(
         name = target["name"] + "CommonTableGen",
+        strip_include_prefix = "lib/Target/" + target["name"],
         tbl_outs = target["tbl_outs"],
         tblgen = ":llvm-tblgen",
+        # MSVC isn't happy with long string literals, while other compilers
+        # which support them get significant compile time improvements with
+        # them enabled. Ideally this flag would only be enabled on Windows via
+        # a select() on `@bazel_tools//src/conditions:windows,`, but that would
+        # require refactoring gentbl from a macro into a rule.
+        # TODO(#92): Refactor gentbl to support this use
+        tblgen_args = "--long-string-literals=0",
         td_file = "lib/Target/" + target["name"] + "/" + target["short_name"] + ".td",
         td_srcs = [
             ":common_target_td_sources",
@@ -1654,6 +1679,7 @@ gentbl(
         srcs = ["lib/Target/" + target["name"] + "/TargetInfo/" + target["name"] + "TargetInfo.cpp"],
         hdrs = glob(["lib/Target/" + target["name"] + "/TargetInfo/*.h"]),
         copts = llvm_copts,
+        strip_include_prefix = "lib/Target/" + target["name"],
         deps = [
             ":" + target["name"] + "CommonTableGen",
             ":Support",
@@ -1667,17 +1693,45 @@ gentbl(
         srcs = glob([
             "lib/Target/" + target["name"] + "/MCTargetDesc/*.cpp",
             "lib/Target/" + target["name"] + "/Utils/*.cpp",
-            "lib/Target/" + target["name"] + "/*.h",
+
+            # We have to include these headers here as well as in the `hdrs`
+            # below to allow the `.cpp` files to use file-relative-inclusion to
+            # find them, even though consumers of this library use inclusion
+            # relative to the target with the `strip_includes_prefix` of this
+            # library. This mixture is likely incompatible with header modules.
+            "lib/Target/" + target["name"] + "/MCTargetDesc/*.h",
+            "lib/Target/" + target["name"] + "/Utils/*.h",
         ]),
         hdrs = glob([
             "lib/Target/" + target["name"] + "/MCTargetDesc/*.h",
             "lib/Target/" + target["name"] + "/Utils/*.h",
-        ]),
-        copts = llvm_copts,
-        textual_hdrs = glob([
+
+            # This a bit of a hack to allow us to expose common, internal
+            # target header files to other libraries within the target via
+            # target-relative includes. This usage of headers is inherently
+            # non-modular as there is a mixture of target-relative inclusion
+            # using this rule and file-relative inclusion using the repeated
+            # listing of these headers in the `srcs` of subsequent rules.
+            "lib/Target/" + target["name"] + "/*.h",
+
+            # FIXME: The entries below should be `textual_hdrs` instead of
+            # `hdrs`, but unfortunately that doesn't work with
+            # `strip_include_prefix`:
+            # https://github.com/bazelbuild/bazel/issues/12424
+            #
+            # Once that issue is fixed and released, we can switch this to
+            # `textual_hdrs` and remove the feature disabling the various Bazel
+            # features (both current and under-development) that motivated the
+            # distinction between these two.
             "lib/Target/" + target["name"] + "/*.def",
             "lib/Target/" + target["name"] + "/*.inc",
         ]),
+        copts = llvm_copts,
+        features = [
+            "-parse_headers",
+            "-header_modules",
+        ],
+        strip_include_prefix = "lib/Target/" + target["name"],
         deps = [
             ":BinaryFormat",
             # Depending on `:CodeGen` headers in this library is almost
@@ -1703,6 +1757,7 @@ gentbl(
         ]),
         hdrs = ["lib/Target/" + target["name"] + "/" + target["short_name"] + ".h"],
         copts = llvm_copts,
+        strip_include_prefix = "lib/Target/" + target["name"],
         textual_hdrs = glob([
             "lib/Target/" + target["name"] + "/*.def",
             "lib/Target/" + target["name"] + "/*.inc",
@@ -1746,6 +1801,30 @@ gentbl(
             ":" + target["name"] + "UtilsAndDesc",
         ],
     )],
+    # This target is a bit of a hack to allow us to expose internal
+    # disassembler header files via internal target-relative include paths.
+    # This usage of headers is inherently non-modular as there is a mixture of
+    # target-relative inclusion using this rule and same-directory inclusion
+    # using the repeated listing of these headers in the `srcs` below.
+    [cc_library(
+        name = target["name"] + "DisassemblerInternalHeaders",
+        # FIXME: This should be `textual_hdrs` instead of `hdrs`, but
+        # unfortunately that doesn't work with `strip_include_prefix`:
+        # https://github.com/bazelbuild/bazel/issues/12424
+        #
+        # Once that issue is fixed and released, we can switch this to
+        # `textual_hdrs` and remove the feature disabling the various Bazel
+        # features (both current and under-development) that motivated the
+        # distinction between these two.
+        hdrs = glob([
+            "lib/Target/" + target["name"] + "/Disassembler/*.h",
+        ]),
+        features = [
+            "-parse_headers",
+            "-header_modules",
+        ],
+        strip_include_prefix = "lib/Target/" + target["name"],
+    )],
     [cc_library(
         name = target["name"] + "Disassembler",
         srcs = glob([
@@ -1762,6 +1841,7 @@ gentbl(
             ":Support",
             ":Target",
             ":" + target["name"] + "CodeGen",
+            ":" + target["name"] + "DisassemblerInternalHeaders",
             ":" + target["name"] + "CommonTableGen",
             ":" + target["name"] + "UtilsAndDesc",
         ],
@@ -1944,6 +2024,7 @@ cc_library(
     deps = [
         ":ExecutionEngine",
         ":Object",
+        ":OrcTargetProcess",
         ":Support",
         ":config",
     ],
@@ -1979,7 +2060,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/*.h",
-        "include/llvm/ExecutionEngine/Orc/RPC/*.h",
     ]) + [
         "include/llvm-c/LLJIT.h",
         "include/llvm-c/Orc.h",
@@ -1994,9 +2074,64 @@ cc_library(
         ":JITLink",
         ":MC",
         ":Object",
+        ":OrcTargetProcess",
         ":Support",
         ":Target",
         ":TransformUtils",
+        ":config",
+    ],
+)
+
+cc_library(
+    name = "OrcShared",
+    srcs = glob([
+        "lib/ExecutionEngine/Orc/Shared/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/RPC/*.h",
+        "include/llvm/ExecutionEngine/Orc/Shared/*.h",
+        "include/llvm/ExecutionEngine/Orc/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
+        ":DebugInfo",
+        ":ExecutionEngine",
+        ":MC",
+        ":MCDisassembler",
+        ":Object",
+        ":Passes",
+        ":Support",
+        ":Target",
+        ":config",
+    ],
+)
+
+cc_library(
+    name = "OrcTargetProcess",
+    srcs = glob([
+        "lib/ExecutionEngine/Orc/TargetProcess/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/TargetProcess/*.h",
+        "include/llvm/ExecutionEngine/Orc/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
+        ":DebugInfo",
+        ":ExecutionEngine",
+        ":MC",
+        ":MCDisassembler",
+        ":Object",
+        ":OrcShared",
+        ":Passes",
+        ":Support",
+        ":Target",
         ":config",
     ],
 )
@@ -2018,6 +2153,7 @@ cc_library(
 
 gentbl(
     name = "DllOptionsTableGen",
+    strip_include_prefix = "lib/ToolDrivers/llvm-dlltool",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "lib/ToolDrivers/llvm-dlltool/Options.inc",
@@ -2042,6 +2178,7 @@ cc_library(
 
 gentbl(
     name = "LibOptionsTableGen",
+    strip_include_prefix = "lib/ToolDrivers/llvm-lib",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "lib/ToolDrivers/llvm-lib/Options.inc",
@@ -2106,6 +2243,22 @@ cc_library(
     ],
 )
 
+# FIXME: This library should use `textual_hdrs` instead of `hdrs` as we don't
+# want to parse or build modules for them (and haven't duplicated the necessary
+# dependencies), but unfortunately that doesn't work with
+# `strip_include_prefix`: https://github.com/bazelbuild/bazel/issues/12424
+#
+# For now, we simply disable features that might rely on the headers parsing.
+cc_library(
+    name = "llvm-objcopy-headers",
+    hdrs = glob(["tools/llvm-objcopy/**/*.h"]),
+    features = [
+        "-parse_headers",
+        "-header_modules",
+    ],
+    strip_include_prefix = "tools/llvm-objcopy",
+)
+
 cc_library(
     name = "MCA",
     srcs = glob([
@@ -2122,6 +2275,15 @@ cc_library(
         ":Object",
         ":Support",
     ],
+)
+
+cc_library(
+    name = "llvm-mca-headers",
+    hdrs = glob([
+        "tools/llvm-mca/*.h",
+        "tools/llvm-mca/Views/*.h",
+    ]),
+    strip_include_prefix = "tools/llvm-mca",
 )
 
 cc_library(
@@ -2144,10 +2306,19 @@ cc_library(
         "tools/llvm-exegesis/lib/*.cpp",
         "tools/llvm-exegesis/lib/X86/*.cpp",
         "tools/llvm-exegesis/lib/X86/*.h",
+
+        # We have to include these headers here as well as in the `hdrs` below
+        # to allow the `.cpp` files to use file-relative-inclusion to find
+        # them, even though consumers of this library use inclusion relative to
+        # `tools/llvm-exegesis/lib` with the `strip_includes_prefix` of this
+        # library. This mixture appears to be incompatible with header modules.
+        "tools/llvm-exegesis/lib/*.h",
     ]),
     hdrs = glob(["tools/llvm-exegesis/lib/*.h"]),
     copts = llvm_copts + ["-DHAVE_LIBPFM=1"],
     defines = ["LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET=InitializeX86ExegesisTarget"],
+    features = ["-header_modules"],
+    strip_include_prefix = "tools/llvm-exegesis/lib",
     tags = [
         "manual",  # External dependency (libpfm4)
         "nobuildkite",  # TODO(chandlerc): Add support for fetching and building libpfm4 and enable this.
@@ -2174,6 +2345,7 @@ cc_library(
 
 gentbl(
     name = "DsymutilTableGen",
+    strip_include_prefix = "tools/dsymutil",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/dsymutil/Options.inc",
@@ -2401,6 +2573,7 @@ cc_binary(
 
 gentbl(
     name = "CvtResTableGen",
+    strip_include_prefix = "tools/llvm-cvtres",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-cvtres/Opts.inc",
@@ -2544,6 +2717,7 @@ cc_binary(
         "tools/llvm-exegesis/llvm-exegesis.cpp",
     ],
     copts = llvm_copts + ["-DHAVE_LIBPFM=0"],
+    linkopts = ["-lpfm"],
     stamp = 0,
     tags = [
         "manual",  # TODO(chandlerc): Enable when the library builds.
@@ -2673,6 +2847,7 @@ cc_binary(
 
 gentbl(
     name = "LipoOptsTableGen",
+    strip_include_prefix = "tools/llvm-lipo",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-lipo/LipoOpts.inc",
@@ -2762,11 +2937,9 @@ cc_binary(
     name = "llvm-mca",
     srcs = glob([
         "tools/llvm-mca/*.cpp",
-        "tools/llvm-mca/*.h",
         "tools/llvm-mca/Views/*.cpp",
-        "tools/llvm-mca/Views/*.h",
     ]),
-    copts = llvm_copts + ["-Iexternal/llvm-project/llvm/tools/llvm-mca"],
+    copts = llvm_copts,
     stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
@@ -2776,6 +2949,7 @@ cc_binary(
         ":MCA",
         ":MCParser",
         ":Support",
+        ":llvm-mca-headers",
     ],
 )
 
@@ -2814,6 +2988,7 @@ cc_binary(
 
 gentbl(
     name = "MtTableGen",
+    strip_include_prefix = "tools/llvm-mt",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-mt/Opts.inc",
@@ -2865,6 +3040,7 @@ cc_binary(
 
 gentbl(
     name = "llvm-objcopy-opts",
+    strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-objcopy/ObjcopyOpts.inc",
@@ -2879,6 +3055,7 @@ gentbl(
 
 gentbl(
     name = "llvm-installnametool-opts",
+    strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-objcopy/InstallNameToolOpts.inc",
@@ -2893,6 +3070,7 @@ gentbl(
 
 gentbl(
     name = "llvm-strip-opts",
+    strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-objcopy/StripOpts.inc",
@@ -2907,6 +3085,7 @@ gentbl(
 
 gentbl(
     name = "llvm-bitcode-strip-opts",
+    strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-objcopy/BitcodeStripOpts.inc",
@@ -2923,6 +3102,9 @@ cc_binary(
     name = "llvm-objcopy",
     srcs = glob([
         "tools/llvm-objcopy/**/*.cpp",
+        # Note that we redundantly include the headers here to allow files to
+        # include same-directory headers in addition to including headers via
+        # the `llvm-objcopy-headers` rule's stripped include prefix.
         "tools/llvm-objcopy/**/*.h",
     ]),
     copts = llvm_copts,
@@ -2937,6 +3119,7 @@ cc_binary(
         ":Target",
         ":llvm-bitcode-strip-opts",
         ":llvm-installnametool-opts",
+        ":llvm-objcopy-headers",
         ":llvm-objcopy-opts",
         ":llvm-strip-opts",
     ],
@@ -3035,6 +3218,7 @@ cc_binary(
 
 gentbl(
     name = "RcTableGen",
+    strip_include_prefix = "tools/llvm-rc",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-rc/Opts.inc",
@@ -3179,6 +3363,7 @@ cc_binary(
 
 gentbl(
     name = "SymbolizerOptsTableGen",
+    strip_include_prefix = "tools/llvm-symbolizer",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "tools/llvm-symbolizer/Opts.inc",
@@ -3346,6 +3531,26 @@ cc_library(
     ],
 )
 
+# A hacky library to expose some internal headers of gtest to its own
+# implementation source files using a stripped include prefix rather than
+# file-relative-inclusion.
+#
+# FIXME: This file should be in `textual_hdrs` instead of `hdrs`, but
+# unfortunately that doesn't work with `strip_include_prefix`:
+# https://github.com/bazelbuild/bazel/issues/12424
+#
+# For now, simply disable parsing and header modules.
+cc_library(
+    name = "gtest_internal_headers",
+    testonly = True,
+    hdrs = ["utils/unittest/googletest/src/gtest-internal-inl.h"],
+    features = [
+        "-parse_headers",
+        "-header_modules",
+    ],
+    strip_include_prefix = "utils/unittest/googletest",
+)
+
 cc_library(
     name = "gtest",
     testonly = True,
@@ -3361,11 +3566,7 @@ cc_library(
     ) + [
     ],
     hdrs = ["utils/unittest/googletest/include/gtest/gtest.h"],
-    # TODO: the hard-coding of `external/llvm-project` path components here is
-    # really unfortunate. It is essentially baking in an implementation detail
-    # of how Bazel runs the compiler when compiling LLVM in the exact
-    # configuration we use.
-    copts = llvm_copts + ["-Iexternal/llvm-project/llvm/utils/unittest/googletest"],
+    copts = llvm_copts,
     defines = [
         "GTEST_HAS_RTTI=0",
         "__STDC_LIMIT_MACROS",
@@ -3380,9 +3581,11 @@ cc_library(
     ],
     textual_hdrs = [
         "utils/unittest/googletest/include/gtest/gtest_pred_impl.h",
-        "utils/unittest/googletest/src/gtest-internal-inl.h",
     ],
-    deps = [":Support"],
+    deps = [
+        ":Support",
+        ":gtest_internal_headers",
+    ],
 )
 
 cc_library(
@@ -3408,11 +3611,7 @@ cc_library(
         exclude = ["utils/unittest/googlemock/src/gmock-all.cc"],
     ),
     hdrs = ["utils/unittest/googlemock/include/gmock/gmock.h"],
-    # TODO: the hard-coding of `external/llvm-project` path components here is
-    # really unfortunate. It is essentially baking in an implementation detail
-    # of how Bazel runs the compiler when compiling LLVM in the exact
-    # configuration we use.
-    copts = llvm_copts + ["-Iexternal/llvm-project/llvm/utils/unittest/googlemock"],
+    copts = llvm_copts,
     includes = [
         "include",
         "utils/unittest/googlemock/include",
