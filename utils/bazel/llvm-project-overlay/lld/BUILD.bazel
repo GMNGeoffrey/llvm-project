@@ -237,8 +237,10 @@ gentbl(
 
 cc_library(
     name = "MachO2",
-    srcs = glob(["MachO/**/*.cpp"]),
-    hdrs = glob(["MachO/**/*.h"]),
+    srcs = glob([
+        "MachO/**/*.cpp",
+        "MachO/**/*.h",
+    ]),
     includes = ["MachO"],
     deps = [
         ":Common",
