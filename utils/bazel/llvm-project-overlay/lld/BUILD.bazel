@@ -23,9 +23,7 @@ genrule(
           "echo '#undef LLD_REPOSITORY' >> $@\n",
 )
 
-# Bazel seems to be broken when you try to include generated files from the same
-# directory using only their basename, so we have to strip the prefix with this
-# intermediate rule to strip the prefix.
+# See https://github.com/bazelbuild/bazel/issues/13803
 cc_library(
     name = "vcs_version",
     hdrs = ["Common/VCSVersion.inc"],
@@ -49,8 +47,7 @@ cc_library(
 
 gentbl(
     name = "elf_options_inc_gen",
-    # Bazel seems to be broken when you try to include generated files from the
-    # same directory using only their basename, so we have to strip the prefix.
+    # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "ELF",
     tbl_outs = [(
         "-gen-opt-parser-defs",
@@ -102,8 +99,7 @@ cc_library(
 
 gentbl(
     name = "coff_options_inc_gen",
-    # Bazel seems to be broken when you try to include generated files from the
-    # same directory using only their basename, so we have to strip the prefix.
+    # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "COFF",
     tbl_outs = [(
         "-gen-opt-parser-defs",
@@ -221,8 +217,7 @@ cc_library(
 
 gentbl(
     name = "macho_options_inc_gen",
-    # Bazel seems to be broken when you try to include generated files from the
-    # same directory using only their basename, so we have to strip the prefix.
+    # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "MachO",
     tbl_outs = [(
         "-gen-opt-parser-defs",
@@ -267,8 +262,7 @@ cc_library(
 
 gentbl(
     name = "darwin_driver_options_inc_gen",
-    # Bazel seems to be broken when you try to include generated files from the
-    # same directory using only their basename, so we have to strip the prefix.
+    # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "lib/Driver",
     tbl_outs = [(
         "-gen-opt-parser-defs",
@@ -303,8 +297,7 @@ cc_library(
 
 gentbl(
     name = "wasm_options_inc_gen",
-    # Bazel seems to be broken when you try to include generated files from the
-    # same directory using only their basename, so we have to strip the prefix.
+    # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "wasm",
     tbl_outs = [(
         "-gen-opt-parser-defs",
