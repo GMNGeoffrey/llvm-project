@@ -13,13 +13,13 @@ package(
 genrule(
     name = "config_version_gen",
     outs = ["include/lld/Common/Version.inc"],
-    cmd = "echo \"#define LLD_VERSION_STRING \\\"git\\\"\" > $@",
+    cmd = "echo '#define LLD_VERSION_STRING \"git\"' > $@",
 )
 
 genrule(
     name = "vcs_version_gen",
     outs = ["Common/VCSVersion.inc"],
-    cmd = "echo '#define LLD_REVISION \"git\"' >> $@\n" +
+    cmd = "echo '#undef LLD_REVISION' >> $@\n" +
           "echo '#undef LLD_REPOSITORY' >> $@\n",
 )
 
