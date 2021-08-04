@@ -104,7 +104,7 @@ gentbl(
     name = "coff_options_inc_gen",
     # Bazel seems to be broken when you try to include generated files from the
     # same directory using only their basename, so we have to strip the prefix.
-    strip_include_prefix = "COFF",
+    # strip_include_prefix = "COFF",
     tbl_outs = [(
         "-gen-opt-parser-defs",
         "COFF/Options.inc",
@@ -118,7 +118,7 @@ gentbl(
 
 cc_library(
     name = "COFF",
-    srcs = glob([
+    srcs = ["COFF/Options.inc"] + glob([
         "COFF/*.cpp",
         "COFF/*.h",
     ]),
