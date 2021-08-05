@@ -511,6 +511,7 @@ OpFoldResult BitcastOp::fold(ArrayRef<Attribute> operands) {
   }
   if (auto denseAttr = operand.dyn_cast<DenseIntElementsAttr>()) {
     Type elType = getElementTypeOrSelf(resType);
+    // mapValues does its own bitcast to the target type.
     return denseAttr.mapValues(elType, [](const APInt &i) { return i; });
   }
 
@@ -522,13 +523,11 @@ OpFoldResult BitcastOp::fold(ArrayRef<Attribute> operands) {
   else
     return {};
 
-  if (resType.isa<IntegerType>()) {
+  if (resType.isa<IntegerType>())
     return IntegerAttr::get(resType, bits);
-  }
-  if (auto resFloatType = resType.dyn_cast<FloatType>()) {
+  if (auto resFloatType = resType.dyn_cast<FloatType>())
     return FloatAttr::get(resType,
                           APFloat(resFloatType.getFloatSemantics(), bits));
-  }
   return {};
 }
 
