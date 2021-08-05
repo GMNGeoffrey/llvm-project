@@ -69,3 +69,11 @@ func @complex_constant_two_different_element_types() {
   %0 = constant [1.0 : f32, -1.0 : f64] : complex<f64>
   return
 }
+
+// -----
+
+func @bitcast_different_bit_widths(%arg : f16) -> f32 {
+  // expected-error@+1 {{are cast incompatible}}
+  %res = bitcast %arg : f16 to f32
+  return %res : f32
+}

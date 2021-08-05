@@ -457,6 +457,22 @@ def AtomicYieldOp : Std_Op<"atomic_yield", [
 }
 
 //===----------------------------------------------------------------------===//
+// BitcastOp
+//===----------------------------------------------------------------------===//
+
+def BitcastOp : ArithmeticCastOp<"bitcast"> {
+  let summary = "bitcast between values of equal bit width";
+  let description = [{
+    Bitcast an integer or floating point value to an integer or floating point
+    value of equal bit width. When operating on vectors, casts elementwise. At
+    runtime this is always a noop cast.
+  }];
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
 // BranchOp
 //===----------------------------------------------------------------------===//
 
