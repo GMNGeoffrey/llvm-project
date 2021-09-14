@@ -1,0 +1,29 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//:run_binary_test.bzl", "run_binary_test")
+load("//llvm:template_rule.bzl", "template_rule")
+
+template_rule(
+    name = "lit_site_cfg",
+    src = "lit.site.cfg.py.in",
+    out = "lit.site.cfg.py",
+    substitutions = {
+
+    },
+)
+
+run_binary_test(
+    name = "lit",
+    args = [
+        "$(location MC/X86/cfi_offset-eip.s)",
+        "--verbose",
+    ],
+    data = [
+        "MC/X86/cfi_offset-eip.s",
+        "lit.cfg.py",
+        ":lit_site_cfg",
+    ],
+    test_binary = "//llvm:lit",
+)
